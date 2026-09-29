@@ -96,7 +96,7 @@ export interface AdminTransaction {
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api", 
     prepareHeaders: (headers, { getState }) => {
       const state = getState() as RootState;
       let token = state?.auth?.token;

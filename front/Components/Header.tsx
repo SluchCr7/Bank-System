@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   X,
@@ -10,6 +10,7 @@ import {
   Bell,
   User,
   LayoutDashboard,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,16 +19,32 @@ import { useAppDispatch, useAppSelector } from "@/app/redux/hooks";
 import { logout } from "@/app/redux/slices/authSlice";
 import { useGetNotificationsQuery, useGetMeQuery } from "@/app/redux/services/api";
 
+const introLinks = [
+  { name: "الرئيسية", href: "/" },
+  { name: "المميزات", href: "/#features" },
+  { name: "الخدمات", href: "/#features" },
+  { name: "حاسبة الصرف", href: "/#calculator" },
+  { name: "الأمان", href: "/#security" },
+  { name: "الأسئلة الشائعة", href: "/#faq" },
+];
+
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { isAuthenticated, user: authUser } = useAppSelector((state) => state.auth);
-  const { data: profile } = useGetMeQuery(undefined, { skip: !isAuthenticated });
+  const isUserLoggedIn = mounted && isAuthenticated;
+
+  const { data: profile } = useGetMeQuery(undefined, { skip: !isUserLoggedIn });
   const { data: notifications = [] } = useGetNotificationsQuery(undefined, {
-    skip: !isAuthenticated,
+    skip: !isUserLoggedIn,
   });
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -36,7 +53,7 @@ const Header = () => {
 
   const handleLogout = () => {
     dispatch(logout());
-    router.push("/Pages/Auth");
+    router.push("/");
     setIsOpen(false);
   };
 
@@ -46,7 +63,10 @@ const Header = () => {
         {/* Main Navbar */}
         <nav className="relative flex items-center justify-between gap-4 rounded-[24px] border border-white/10 bg-[#080F1C]/95 px-5 py-4 shadow-2xl shadow-black/20 backdrop-blur-2xl md:px-7">
           {/* Logo */}
-          <Link href="/Pages/Dashboard" className="group flex shrink-0 items-center gap-3">
+          <Link
+            href={isUserLoggedIn ? "/Pages/Dashboard" : "/"}
+            className="group flex shrink-0 items-center gap-3"
+          >
             <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-300 to-blue-600 shadow-lg shadow-blue-500/20 transition-transform duration-300 group-hover:rotate-6">
               <span className="text-lg font-black tracking-tighter text-[#080F1C]">
                 PFB
@@ -67,59 +87,79 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-1.5 lg:flex">
-            {navLinks.map((link: { name: string; href: string }) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`group relative rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
-                  pathname === link.href
-                    ? "bg-cyan-400 text-[#080F1C] font-bold shadow-md shadow-cyan-400/20"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+            {isUserLoggedIn ? (
+              // Logged In: Show all internal banking links normally
+              <>
+                {navLinks.map((link: { name: string; href: string }) => (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className={`group relative rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
+                      pathname === link.href
+                        ? "bg-cyan-400 text-[#080F1C] font-bold shadow-md shadow-cyan-400/20"
+                        : "text-white/70 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
 
-            {isAdmin && (
-              <Link
-                href="/Admin"
-                className={`group relative rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 flex items-center gap-1.5 ${
-                  pathname.startsWith("/Admin")
-                    ? "bg-purple-500 text-white font-bold shadow-md shadow-purple-500/20"
-                    : "text-purple-300/80 hover:bg-purple-500/10 hover:text-purple-200"
-                }`}
-              >
-                <LayoutDashboard size={15} />
-                <span>لوحة التحكم</span>
-              </Link>
-            )}
+                {isAdmin && (
+                  <Link
+                    href="/Admin"
+                    className={`group relative rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 flex items-center gap-1.5 ${
+                      pathname.startsWith("/Admin")
+                        ? "bg-purple-500 text-white font-bold shadow-md shadow-purple-500/20"
+                        : "text-purple-300/80 hover:bg-purple-500/10 hover:text-purple-200"
+                    }`}
+                  >
+                    <LayoutDashboard size={15} />
+                    <span>لوحة التحكم</span>
+                  </Link>
+                )}
 
-            {isAuthenticated && (
-              <Link
-                href="/Pages/Notifications"
-                className={`group relative rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
-                  pathname === "/Pages/Notifications"
-                    ? "bg-cyan-400 text-[#080F1C] font-bold"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
-                }`}
-                title="الإشعارات"
-              >
-                <div className="relative flex items-center">
-                  <Bell size={18} />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-400 text-[10px] font-bold text-[#080F1C]">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-              </Link>
+                <Link
+                  href="/Pages/Notifications"
+                  className={`group relative rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 ${
+                    pathname === "/Pages/Notifications"
+                      ? "bg-cyan-400 text-[#080F1C] font-bold"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                  title="الإشعارات"
+                >
+                  <div className="relative flex items-center">
+                    <Bell size={18} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-400 text-[10px] font-bold text-[#080F1C]">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </>
+            ) : (
+              // Not Logged In: Show Intro links
+              <>
+                {introLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className={`group relative rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
+                      pathname === link.href
+                        ? "bg-white/10 text-cyan-400 font-bold"
+                        : "text-white/75 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+              </>
             )}
           </div>
 
           {/* Actions */}
           <div className="hidden shrink-0 items-center gap-3 lg:flex">
-            {isAuthenticated ? (
+            {isUserLoggedIn ? (
               <div className="flex items-center gap-3">
                 <Link
                   href="/Pages/Profile"
@@ -140,13 +180,21 @@ const Header = () => {
                 </button>
               </div>
             ) : (
-              <Link
-                href="/Pages/Auth"
-                className="flex items-center gap-2 rounded-xl bg-cyan-400 px-5 py-2.5 text-sm font-bold text-[#080F1C] shadow-lg shadow-cyan-400/10 transition hover:bg-cyan-300"
-              >
-                <ShieldCheck size={18} />
-                دخول
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/Pages/Auth?mode=login"
+                  className="px-3.5 py-2 text-sm font-semibold text-slate-300 transition hover:text-white"
+                >
+                  تسجيل الدخول
+                </Link>
+                <Link
+                  href="/Pages/Auth?mode=register"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4.5 py-2.5 text-sm font-bold text-[#080F1C] shadow-lg shadow-cyan-400/15 transition-all hover:scale-[1.02] hover:shadow-cyan-400/30"
+                >
+                  <Sparkles size={15} />
+                  <span>فتح حساب</span>
+                </Link>
+              </div>
             )}
           </div>
 
@@ -174,10 +222,12 @@ const Header = () => {
               <div className="mb-4 flex items-center justify-between border-b border-white/[0.08] pb-4">
                 <div>
                   <p className="text-sm font-bold text-white">
-                    {isAuthenticated ? `أهلاً بك، ${displayName}` : "أهلاً بك في PFB"}
+                    {isUserLoggedIn ? `أهلاً بك، ${displayName}` : "أهلاً بك في بنك PFB الرقمي"}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    خدماتك المصرفية الرقمية المتطورة
+                    {isUserLoggedIn
+                      ? "لوحة تحكمك المصرفية المتطورة"
+                      : "المصرفية الرقمية المتطورة والآمنة"}
                   </p>
                 </div>
 
@@ -187,62 +237,80 @@ const Header = () => {
               </div>
 
               <div className="flex flex-col gap-1">
-                {navLinks.map((link: { name: string; href: string }) => (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      pathname === link.href
-                        ? "bg-cyan-400 text-[#080F1C] font-bold"
-                        : "text-white/70 hover:bg-white/5"
-                    }`}
-                  >
-                    {link.name}
-                    <ArrowUpLeft size={16} className="opacity-50" />
-                  </Link>
-                ))}
+                {isUserLoggedIn ? (
+                  // Logged in mobile links
+                  <>
+                    {navLinks.map((link: { name: string; href: string }) => (
+                      <Link
+                        key={link.name}
+                        href={link.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          pathname === link.href
+                            ? "bg-cyan-400 text-[#080F1C] font-bold"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        {link.name}
+                        <ArrowUpLeft size={16} className="opacity-50" />
+                      </Link>
+                    ))}
 
-                {isAdmin && (
-                  <Link
-                    href="/Admin"
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      pathname.startsWith("/Admin")
-                        ? "bg-purple-500 text-white font-bold"
-                        : "text-purple-300 hover:bg-purple-500/10"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <LayoutDashboard size={16} />
-                      <span>لوحة التحكم (Admin)</span>
-                    </div>
-                    <ArrowUpLeft size={16} className="opacity-50" />
-                  </Link>
-                )}
-
-                {isAuthenticated && (
-                  <Link
-                    href="/Pages/Notifications"
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      pathname === "/Pages/Notifications"
-                        ? "bg-cyan-400 text-[#080F1C] font-bold"
-                        : "text-white/70 hover:bg-white/5"
-                    }`}
-                  >
-                    <span>الإشعارات</span>
-                    {unreadCount > 0 && (
-                      <span className="rounded-full bg-cyan-400 px-2 py-0.5 text-xs font-bold text-[#080F1C]">
-                        {unreadCount}
-                      </span>
+                    {isAdmin && (
+                      <Link
+                        href="/Admin"
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          pathname.startsWith("/Admin")
+                            ? "bg-purple-500 text-white font-bold"
+                            : "text-purple-300 hover:bg-purple-500/10"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <LayoutDashboard size={16} />
+                          <span>لوحة التحكم (Admin)</span>
+                        </div>
+                        <ArrowUpLeft size={16} className="opacity-50" />
+                      </Link>
                     )}
-                  </Link>
+
+                    <Link
+                      href="/Pages/Notifications"
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${
+                        pathname === "/Pages/Notifications"
+                          ? "bg-cyan-400 text-[#080F1C] font-bold"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span>الإشعارات</span>
+                      {unreadCount > 0 && (
+                        <span className="rounded-full bg-cyan-400 px-2 py-0.5 text-xs font-bold text-[#080F1C]">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  </>
+                ) : (
+                  // Not logged in mobile links
+                  <>
+                    {introLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        href={link.href}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-white/75 transition hover:bg-white/5 hover:text-white"
+                      >
+                        {link.name}
+                        <ArrowUpLeft size={16} className="opacity-50" />
+                      </Link>
+                    ))}
+                  </>
                 )}
               </div>
 
               <div className="mt-4 border-t border-white/[0.08] pt-4">
-                {isAuthenticated ? (
+                {isUserLoggedIn ? (
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -252,14 +320,24 @@ const Header = () => {
                     تسجيل الخروج
                   </button>
                 ) : (
-                  <Link
-                    href="/Pages/Auth"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-cyan-400 py-3 text-sm font-bold text-[#080F1C] shadow-lg transition hover:bg-cyan-300"
-                  >
-                    <ShieldCheck size={17} />
-                    تسجيل الدخول
-                  </Link>
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href="/Pages/Auth?mode=login"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                      <ShieldCheck size={17} />
+                      تسجيل الدخول
+                    </Link>
+                    <Link
+                      href="/Pages/Auth?mode=register"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-cyan-400 py-3 text-sm font-bold text-[#080F1C] shadow-lg transition hover:bg-cyan-300"
+                    >
+                      <Sparkles size={17} />
+                      فتح حساب جديد
+                    </Link>
+                  </div>
                 )}
               </div>
             </div>

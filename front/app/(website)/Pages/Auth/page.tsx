@@ -19,21 +19,37 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLoginMutation, useRegisterMutation } from "@/app/redux/services/api";
-import { useAppDispatch } from "@/app/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/redux/hooks";
 import { setCredentials } from "@/app/redux/slices/authSlice";
 
 type Mode = "login" | "register";
 
-export default function AuthPage() {
-  const [mode, setMode] = useState<Mode>("login");
+function AuthContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryMode = searchParams.get("mode");
+  const [mode, setMode] = useState<Mode>(queryMode === "register" ? "register" : "login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const router = useRouter();
   const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/Pages/Dashboard");
+    }
+  }, [isAuthenticated, router]);
+
+  React.useEffect(() => {
+    const q = searchParams.get("mode");
+    if (q === "register" || q === "login") {
+      setMode(q);
+    }
+  }, [searchParams]);
 
   const [loginApi, { isLoading: isLoginLoading }] = useLoginMutation();
   const [registerApi, { isLoading: isRegisterLoading }] = useRegisterMutation();
@@ -625,5 +641,19 @@ function SwitchMessage({
         <ArrowRight size={13} />
       </button>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#050912]">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+        </div>
+      }
+    >
+      <AuthContent />
+    </React.Suspense>
   );
 }

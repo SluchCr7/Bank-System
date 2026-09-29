@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Wallet,
   CreditCard,
@@ -21,6 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { quickActions } from "@/app/Data/data";
 import { messageState, QuickAction } from "@/app/Data/type";
 import {
@@ -41,7 +42,19 @@ const money = (value: number) =>
   }).format(value || 0);
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isAuthenticated) {
+      router.replace("/");
+    }
+  }, [mounted, isAuthenticated, router]);
 
   const { data: userProfile, isLoading: isUserLoading } = useGetMeQuery(
     undefined,
